@@ -1,0 +1,1 @@
+# predikto-appApplication-de-predictions-sportives-avec-supabase-et-paystack
