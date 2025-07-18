@@ -1,0 +1,3222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predikto - Prédictions Sportives</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .user-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            min-width: 120px;
+            backdrop-filter: blur(10px);
+        }
+
+        .vip-status-card {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+            color: #333;
+            border: 2px solid #ffd700;
+        }
+
+        .vip-status-card.basic {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        }
+
+        .vip-status-card.premium {
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+        }
+
+        .vip-status-card.elite {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .filters {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            background: white;
+            min-width: 150px;
+        }
+
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .match-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .match-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .match-league {
+            font-size: 0.9rem;
+            color: #666;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .match-time {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .match-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .team {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .team-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .team-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .vs {
+            font-size: 1.2rem;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .prediction-section {
+            margin-bottom: 20px;
+        }
+
+        .prediction-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .prediction-btn {
+            flex: 1;
+            padding: 15px 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .prediction-btn:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .prediction-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .prediction-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .odds {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .prediction-label {
+            font-size: 0.9rem;
+        }
+
+        .stake-section {
+            margin-bottom: 20px;
+        }
+
+        .stake-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .potential-win {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .submit-prediction {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .submit-prediction:hover {
+            transform: translateY(-2px);
+        }
+
+        .submit-prediction:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .countdown {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #dc3545;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .closed {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #6c757d;
+            font-weight: bold;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .continent-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .my-predictions {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .prediction-result {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .prediction-result.win {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .prediction-result.lose {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .prediction-result.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .leaderboard {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .leaderboard-rank {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            width: 40px;
+        }
+
+        .rewards-section {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            color: #333;
+        }
+
+        .reward-category {
+            margin-bottom: 30px;
+        }
+
+        .reward-category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .reward-card {
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .reward-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .reward-card.affordable {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.05);
+        }
+
+        .reward-card.expensive {
+            border-color: #dc3545;
+            background: rgba(220, 53, 69, 0.05);
+        }
+
+        .reward-card.achievement {
+            border-color: #ffd700;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 179, 71, 0.1));
+        }
+
+        .reward-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .reward-info {
+            flex: 1;
+        }
+
+        .reward-info strong {
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .reward-info small {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .reward-action {
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .reward-cost {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .achievement-points {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 8px;
+        }
+
+        .claim-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .affordable-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .affordable-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .expensive-btn {
+            background: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .achievement-btn {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+            color: #333;
+        }
+
+        .achievement-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+
+        .reward-claimed {
+            background: #d4edda !important;
+            border-color: #28a745 !important;
+        }
+
+        .reward-claimed .claim-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .reward-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .reward-notification.show {
+            transform: translateX(0);
+        }
+
+        .points-balance {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .points-balance strong {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .buy-points-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 0px;
+        }
+
+        .currency-selector {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .package-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .package-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .package-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .package-card.popular {
+            border: 3px solid #28a745;
+            transform: scale(1.05);
+        }
+
+        .package-badge {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 0 0 15px 0;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .popular-badge {
+            background: #28a745;
+        }
+
+        .package-points {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0 10px 0;
+        }
+
+        .package-price {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .package-bonus {
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .package-description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .buy-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .buy-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .package-card.custom {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+        }
+
+        .package-card.starter .package-badge {
+            background: #6c757d;
+        }
+
+        .package-card.premium .package-badge {
+            background: #dc3545;
+        }
+
+        .package-card.vip .package-badge {
+            background: #6f42c1;
+        }
+
+        .package-card.legend .package-badge {
+            background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 100%);
+        }
+
+        .payment-info {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .payment-method {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .payment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .payment-modal.active {
+            display: flex;
+        }
+
+        .payment-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .matches-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .prediction-options {
+                flex-direction: column;
+            }
+            
+            .user-stats {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 Predikto</h1>
+            <p>Prédictions Sportives avec Récompenses</p>
+        </div>
+
+        <div class="user-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="userPoints">1,250</div>
+                <div class="stat-label">Points</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="userRank">12</div>
+                <div class="stat-label">Classement</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="winRate">68%</div>
+                <div class="stat-label">Taux de Réussite</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalPredictions">45</div>
+                <div class="stat-label">Prédictions</div>
+            </div>
+            <div class="stat-card vip-status-card" id="vipStatusCard">
+                <div class="stat-value" id="vipStatus">👤</div>
+                <div class="stat-label">Statut VIP</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('matches')">Matchs à Prédire</div>
+            <div class="tab" onclick="switchTab('predictions')">Mes Prédictions</div>
+            <div class="tab" onclick="switchTab('leaderboard')">Classement</div>
+            <div class="tab" onclick="switchTab('rewards')">Récompenses</div>
+            <div class="tab" onclick="switchTab('buy')">💰 Acheter des Points</div>
+            <div class="tab" onclick="switchTab('vip')">👑 Devenir VIP</div>
+        </div>
+
+        <div id="matches-tab" class="tab-content active">
+            <div class="filters">
+                <div class="filter-row">
+                    <select class="filter-select" id="continentFilter">
+                        <option value="">Tous les continents</option>
+                        <option value="Europe">Europe</option>
+                        <option value="South America">Amérique du Sud</option>
+                        <option value="North America">Amérique du Nord</option>
+                        <option value="Africa">Afrique</option>
+                        <option value="Asia">Asie</option>
+                    </select>
+                    <select class="filter-select" id="leagueFilter">
+                        <option value="">Toutes les ligues</option>
+                        <option value="Premier League">Premier League</option>
+                        <option value="La Liga">La Liga</option>
+                        <option value="Serie A">Serie A</option>
+                        <option value="Bundesliga">Bundesliga</option>
+                        <option value="Ligue 1">Ligue 1</option>
+                    </select>
+                    <select class="filter-select" id="timeFilter">
+                        <option value="">Toutes les périodes</option>
+                        <option value="today">Aujourd'hui</option>
+                        <option value="tomorrow">Demain</option>
+                        <option value="week">Cette semaine</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="matches-grid" id="matchesGrid">
+                <!-- Les matchs seront chargés ici -->
+            </div>
+        </div>
+
+        <div id="predictions-tab" class="tab-content">
+            <div class="my-predictions">
+                <h3 style="margin-bottom: 20px;">Mes Prédictions</h3>
+                <div id="userPredictions">
+                    <!-- Les prédictions de l'utilisateur seront affichées ici -->
+                </div>
+            </div>
+        </div>
+
+        <div id="leaderboard-tab" class="tab-content">
+            <div class="leaderboard">
+                <h3 style="margin-bottom: 20px;">Classement Global</h3>
+                <div id="leaderboardList">
+                    <!-- Le classement sera affiché ici -->
+                </div>
+            </div>
+        </div>
+
+        <div id="rewards-tab" class="tab-content">
+            <div class="rewards-section">
+                <h3 style="margin-bottom: 20px;">🎁 Récompenses Disponibles</h3>
+                <div class="points-balance">
+                    <div>Votre solde actuel</div>
+                    <strong id="rewardPoints">1,250 points</strong>
+                </div>
+                <div id="rewardsList">
+                    <!-- Les récompenses seront affichées ici -->
+                </div>
+            </div>
+        </div>
+
+        <div id="buy-tab" class="tab-content">
+            <div class="buy-points-section">
+                <h3 style="margin-bottom: 20px; text-align: center; color: white;">💰 Acheter des Points</h3>
+                
+                <div class="currency-selector">
+                    <label style="color: white; margin-right: 15px;">Devise :</label>
+                    <select id="currencySelect" onchange="updatePrices()" style="padding: 10px; border-radius: 8px; border: none; font-size: 16px;">
+                        <option value="USD">🇺🇸 Dollar US ($)</option>
+                        <option value="EUR">🇪🇺 Euro (€)</option>
+                        <option value="XOF">🇨🇮 Franc CFA (XOF)</option>
+                    </select>
+                </div>
+
+                <div class="points-packages">
+                    <div class="package-grid">
+                        <div class="package-card starter" data-points="100" data-usd="1.00" data-eur="0.95" data-xof="600">
+                            <div class="package-badge">Starter</div>
+                            <div class="package-points">100 Points</div>
+                            <div class="package-price">$1.00</div>
+                            <div class="package-description">Parfait pour commencer</div>
+                            <button class="buy-btn" onclick="buyPoints(100, 1.00, 'USD')">Acheter</button>
+                        </div>
+
+                        <div class="package-card popular" data-points="500" data-usd="4.50" data-eur="4.25" data-xof="2700">
+                            <div class="package-badge popular-badge">Populaire</div>
+                            <div class="package-points">500 Points</div>
+                            <div class="package-price">$4.50</div>
+                            <div class="package-bonus">+50 Points Bonus!</div>
+                            <div class="package-description">Meilleur rapport qualité-prix</div>
+                            <button class="buy-btn" onclick="buyPoints(500, 4.50, 'USD')">Acheter</button>
+                        </div>
+
+                        <div class="package-card premium" data-points="1000" data-usd="8.00" data-eur="7.60" data-xof="4800">
+                            <div class="package-badge">Premium</div>
+                            <div class="package-points">1000 Points</div>
+                            <div class="package-price">$8.00</div>
+                            <div class="package-bonus">+200 Points Bonus!</div>
+                            <div class="package-description">Pour les pros</div>
+                            <button class="buy-btn" onclick="buyPoints(1000, 8.00, 'USD')">Acheter</button>
+                        </div>
+
+                        <div class="package-card vip" data-points="2500" data-usd="18.00" data-eur="17.10" data-xof="10800">
+                            <div class="package-badge">VIP</div>
+                            <div class="package-points">2500 Points</div>
+                            <div class="package-price">$18.00</div>
+                            <div class="package-bonus">+700 Points Bonus!</div>
+                            <div class="package-description">Pack exclusif</div>
+                            <button class="buy-btn" onclick="buyPoints(2500, 18.00, 'USD')">Acheter</button>
+                        </div>
+
+                        <div class="package-card legend" data-points="5000" data-usd="30.00" data-eur="28.50" data-xof="18000">
+                            <div class="package-badge">Legend</div>
+                            <div class="package-points">5000 Points</div>
+                            <div class="package-price">$30.00</div>
+                            <div class="package-bonus">+2000 Points Bonus!</div>
+                            <div class="package-description">Le pack ultime</div>
+                            <button class="buy-btn" onclick="buyPoints(5000, 30.00, 'USD')">Acheter</button>
+                        </div>
+
+                        <div class="package-card custom" data-points="custom" data-usd="custom" data-eur="custom" data-xof="custom">
+                            <div class="package-badge">Personnalisé</div>
+                            <div class="package-points">
+                                <input type="number" id="customPoints" placeholder="Nombre de points" min="50" max="10000" style="width: 100%; padding: 8px; border-radius: 5px; border: none; margin-bottom: 10px;">
+                            </div>
+                            <div class="package-price" id="customPrice">$0.00</div>
+                            <div class="package-description">Choisissez votre montant</div>
+                            <button class="buy-btn" onclick="buyCustomPoints()">Acheter</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="payment-info">
+                    <h4 style="color: white; margin-bottom: 15px;">💳 Méthodes de Paiement Acceptées</h4>
+                    <div class="payment-methods">
+                        <div class="payment-method">💳 Cartes de crédit/débit</div>
+                        <div class="payment-method">🏦 Virements bancaires</div>
+                        <div class="payment-method">📱 Mobile Money</div>
+                        <div class="payment-method">🌍 Paystack sécurisé</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="vip-tab" class="tab-content">
+            <div class="vip-section">
+                <div class="vip-header">
+                    <h3>👑 Devenir Membre VIP</h3>
+                    <p>Débloquez des avantages exclusifs et maximisez vos gains !</p>
+                </div>
+
+                <div class="vip-currency-selector">
+                    <label>Devise :</label>
+                    <select id="vipCurrencySelect" onchange="updateVipPrices()">
+                        <option value="USD">🇺🇸 Dollar US ($)</option>
+                        <option value="EUR">🇪🇺 Euro (€)</option>
+                        <option value="XOF">🇨🇮 Franc CFA (XOF)</option>
+                    </select>
+                </div>
+
+                <div class="vip-plans">
+                    <div class="vip-plan basic" data-monthly-usd="4.99" data-yearly-usd="49.99" data-monthly-eur="4.75" data-yearly-eur="47.50" data-monthly-xof="3000" data-yearly-xof="30000">
+                        <div class="vip-plan-header">
+                            <h4>🥉 VIP Basic</h4>
+                            <div class="vip-plan-price">
+                                <div class="price-monthly">$4.99/mois</div>
+                                <div class="price-yearly">$49.99/an <span class="discount">-17%</span></div>
+                            </div>
+                        </div>
+                        <div class="vip-plan-benefits">
+                            <div class="benefit">✅ +100 points bonus à l'inscription</div>
+                            <div class="benefit">✅ +20% de gains sur toutes les prédictions</div>
+                            <div class="benefit">✅ Badge VIP Basic sur votre profil</div>
+                            <div class="benefit">✅ Accès prioritaire aux nouveaux matchs</div>
+                            <div class="benefit">✅ 1 cadeau mystère gratuit/mois</div>
+                        </div>
+                        <div class="vip-plan-actions">
+                            <button class="vip-btn monthly" onclick="subscribeVip('basic', 'monthly', 4.99)">
+                                S'abonner Mensuellement
+                            </button>
+                            <button class="vip-btn yearly" onclick="subscribeVip('basic', 'yearly', 49.99)">
+                                S'abonner Annuellement
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="vip-plan premium popular" data-monthly-usd="9.99" data-yearly-usd="99.99" data-monthly-eur="9.50" data-yearly-eur="95.00" data-monthly-xof="6000" data-yearly-xof="60000">
+                        <div class="popular-badge">Most Popular</div>
+                        <div class="vip-plan-header">
+                            <h4>🥈 VIP Premium</h4>
+                            <div class="vip-plan-price">
+                                <div class="price-monthly">$9.99/mois</div>
+                                <div class="price-yearly">$99.99/an <span class="discount">-17%</span></div>
+                            </div>
+                        </div>
+                        <div class="vip-plan-benefits">
+                            <div class="benefit">✅ +500 points bonus à l'inscription</div>
+                            <div class="benefit">✅ +40% de gains sur toutes les prédictions</div>
+                            <div class="benefit">✅ Badge VIP Premium sur votre profil</div>
+                            <div class="benefit">✅ Prédictions illimitées</div>
+                            <div class="benefit">✅ 3 cadeaux mystère gratuits/mois</div>
+                            <div class="benefit">✅ Accès aux statistiques avancées</div>
+                            <div class="benefit">✅ Support prioritaire 24/7</div>
+                        </div>
+                        <div class="vip-plan-actions">
+                            <button class="vip-btn monthly" onclick="subscribeVip('premium', 'monthly', 9.99)">
+                                S'abonner Mensuellement
+                            </button>
+                            <button class="vip-btn yearly" onclick="subscribeVip('premium', 'yearly', 99.99)">
+                                S'abonner Annuellement
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="vip-plan elite" data-monthly-usd="19.99" data-yearly-usd="199.99" data-monthly-eur="19.00" data-yearly-eur="190.00" data-monthly-xof="12000" data-yearly-xof="120000">
+                        <div class="vip-plan-header">
+                            <h4>🥇 VIP Elite</h4>
+                            <div class="vip-plan-price">
+                                <div class="price-monthly">$19.99/mois</div>
+                                <div class="price-yearly">$199.99/an <span class="discount">-17%</span></div>
+                            </div>
+                        </div>
+                        <div class="vip-plan-benefits">
+                            <div class="benefit">✅ +1000 points bonus à l'inscription</div>
+                            <div class="benefit">✅ +75% de gains sur toutes les prédictions</div>
+                            <div class="benefit">✅ Badge VIP Elite exclusif</div>
+                            <div class="benefit">✅ Prédictions illimitées</div>
+                            <div class="benefit">✅ 5 cadeaux mystère gratuits/mois</div>
+                            <div class="benefit">✅ Accès aux prédictions IA</div>
+                            <div class="benefit">✅ Conseils d'experts exclusifs</div>
+                            <div class="benefit">✅ Accès anticipé aux nouveautés</div>
+                            <div class="benefit">✅ Concierge VIP personnel</div>
+                        </div>
+                        <div class="vip-plan-actions">
+                            <button class="vip-btn monthly" onclick="subscribeVip('elite', 'monthly', 19.99)">
+                                S'abonner Mensuellement
+                            </button>
+                            <button class="vip-btn yearly" onclick="subscribeVip('elite', 'yearly', 199.99)">
+                                S'abonner Annuellement
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vip-current-status">
+                    <h4>Votre Statut Actuel</h4>
+                    <div class="current-plan">
+                        <div class="plan-info">
+                            <span class="plan-name">👤 Membre Gratuit</span>
+                            <span class="plan-details">Gains standard • Accès limité</span>
+                        </div>
+                        <div class="plan-upgrade">
+                            <button class="upgrade-btn" onclick="switchTab('vip')">Passer au VIP</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vip-benefits-comparison">
+                    <h4>Comparaison des Avantages</h4>
+                    <div class="comparison-table">
+                        <div class="comparison-row header">
+                            <div class="feature">Fonctionnalité</div>
+                            <div class="free">Gratuit</div>
+                            <div class="basic">VIP Basic</div>
+                            <div class="premium">VIP Premium</div>
+                            <div class="elite">VIP Elite</div>
+                        </div>
+                        <div class="comparison-row">
+                            <div class="feature">Bonus de gains</div>
+                            <div class="free">0%</div>
+                            <div class="basic">+20%</div>
+                            <div class="premium">+40%</div>
+                            <div class="elite">+75%</div>
+                        </div>
+                        <div class="comparison-row">
+                            <div class="feature">Points bonus d'inscription</div>
+                            <div class="free">0</div>
+                            <div class="basic">100</div>
+                            <div class="premium">500</div>
+                            <div class="elite">1000</div>
+                        </div>
+                        <div class="comparison-row">
+                            <div class="feature">Cadeaux mystère/mois</div>
+                            <div class="free">0</div>
+                            <div class="basic">1</div>
+                            <div class="premium">3</div>
+                            <div class="elite">5</div>
+                        </div>
+                        <div class="comparison-row">
+                            <div class="feature">Support prioritaire</div>
+                            <div class="free">❌</div>
+                            <div class="basic">❌</div>
+                            <div class="premium">✅</div>
+                            <div class="elite">✅</div>
+                        </div>
+                        <div class="comparison-row">
+                            <div class="feature">Prédictions IA</div>
+                            <div class="free">❌</div>
+                            <div class="basic">❌</div>
+                            <div class="premium">❌</div>
+                            <div class="elite">✅</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de paiement -->
+        <div id="paymentModal" class="payment-modal">
+            <div class="payment-modal-content">
+                <span class="close-modal" onclick="closePaymentModal()">&times;</span>
+                <h3>Traitement du paiement...</h3>
+                <div style="margin: 20px 0;">
+                    <div style="border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                </div>
+                <p>Veuillez patienter pendant que nous traitons votre paiement.</p>
+            </div>
+        </div>
+
+        <!-- Notification de récompense -->
+        <div id="rewardNotification" class="reward-notification">
+            <div id="notificationMessage"></div>
+            <button onclick="closeNotification()" style="background: none; border: none; color: white; float: right; cursor: pointer;">&times;</button>
+        </div>
+
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    </div>
+
+    <script>
+        const API_KEY = '613167';
+        const API_BASE_V1 = `https://www.thesportsdb.com/api/v1/json/${API_KEY}`;
+        const PAYSTACK_PUBLIC_KEY = 'pk_live_e5653c5260fde4e153a8205bcfe20f3273e4bb94';
+        
+        // Configuration Supabase
+        const SUPABASE_URL = 'https://nxnsnavaizinqfowrgtn.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54bnNuYXZhaXppbnFmb3dyZ3RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NTQzODgsImV4cCI6MjA2ODQzMDM4OH0.kPpNqFFivJX6Ddln4-GcEqxdrn3EzPfYlL-6JNOGAAQ'
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        
+        // Variables globales
+        let currentUser = null;
+        let currentUserId = null;
+        
+        // Taux de change (mise à jour automatique recommandée)
+        const exchangeRates = {
+            'USD': 1.0,
+            'EUR': 0.95,
+            'XOF': 600
+        };
+
+        // Données simulées pour la démo
+        let userPredictions = [];
+        let userStats = {
+            points: 1250,
+            rank: 12,
+            winRate: 68,
+            totalPredictions: 45,
+            currentStreak: 2, // Simulation d'une série actuelle
+            vipStatus: 'free', // 'free', 'basic', 'premium', 'elite'
+            vipExpiry: null
+        };
+
+        // Cotes simulées pour les matchs
+        const oddsData = {
+            'home_win': [1.85, 2.1, 1.75, 2.5, 1.6, 3.2],
+            'draw': [3.2, 3.5, 3.8, 3.1, 4.0, 2.8],
+            'away_win': [4.2, 3.6, 4.8, 2.9, 5.1, 2.1]
+        };
+
+        // Continents par pays
+        const continentMapping = {
+            'England': 'Europe',
+            'Spain': 'Europe',
+            'Italy': 'Europe',
+            'Germany': 'Europe',
+            'France': 'Europe',
+            'Brazil': 'South America',
+            'Argentina': 'South America',
+            'USA': 'North America',
+            'Mexico': 'North America',
+            'Morocco': 'Africa',
+            'Egypt': 'Africa',
+            'Japan': 'Asia',
+            'South Korea': 'Asia'
+        };
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'matches') {
+                loadMatches();
+            } else if (tabName === 'predictions') {
+                displayUserPredictions();
+            } else if (tabName === 'leaderboard') {
+                displayLeaderboard();
+            } else if (tabName === 'rewards') {
+                displayRewards();
+            } else if (tabName === 'buy') {
+                displayBuyPoints();
+            } else if (tabName === 'vip') {
+                displayVipSection();
+            }
+        }
+
+        async function loadMatches() {
+            const matchesGrid = document.getElementById('matchesGrid');
+            matchesGrid.innerHTML = '<div style="text-align: center; padding: 40px; color: white;">Chargement des matchs...</div>';
+
+            try {
+                // Charger les matchs de différentes ligues
+                const leagues = [
+                    { id: '4328', name: 'Premier League' },
+                    { id: '4335', name: 'La Liga' },
+                    { id: '4331', name: 'Serie A' },
+                    { id: '4332', name: 'Bundesliga' },
+                    { id: '4334', name: 'Ligue 1' }
+                ];
+                
+                let allMatches = [];
+                let successfulRequests = 0;
+
+                for (const league of leagues) {
+                    try {
+                        const response = await fetch(`${API_BASE_V1}/eventsnextleague.php?id=${league.id}`, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.events && data.events.length > 0) {
+                                allMatches = allMatches.concat(data.events.slice(0, 2));
+                                successfulRequests++;
+                            }
+                        }
+                    } catch (error) {
+                        // Gestion silencieuse des erreurs
+                        continue;
+                    }
+                }
+
+                if (allMatches.length > 0) {
+                    displayMatches(allMatches);
+                } else {
+                    // Afficher des matchs fictifs pour la démo
+                    displayDemoMatches();
+                }
+            } catch (error) {
+                displayDemoMatches();
+            }
+        }
+
+        function displayDemoMatches() {
+            const demoMatches = [
+                {
+                    idEvent: '1',
+                    strHomeTeam: 'Arsenal',
+                    strAwayTeam: 'Manchester City',
+                    strLeague: 'Premier League',
+                    dateEvent: '2025-07-19',
+                    strTime: '15:00:00',
+                    strCountry: 'England',
+                    strHomeTeamBadge: 'https://via.placeholder.com/40?text=ARS',
+                    strAwayTeamBadge: 'https://via.placeholder.com/40?text=MCI'
+                },
+                {
+                    idEvent: '2',
+                    strHomeTeam: 'Real Madrid',
+                    strAwayTeam: 'Barcelona',
+                    strLeague: 'La Liga',
+                    dateEvent: '2025-07-19',
+                    strTime: '20:00:00',
+                    strCountry: 'Spain',
+                    strHomeTeamBadge: 'https://via.placeholder.com/40?text=RM',
+                    strAwayTeamBadge: 'https://via.placeholder.com/40?text=FC'
+                },
+                {
+                    idEvent: '3',
+                    strHomeTeam: 'Bayern Munich',
+                    strAwayTeam: 'Borussia Dortmund',
+                    strLeague: 'Bundesliga',
+                    dateEvent: '2025-07-20',
+                    strTime: '18:30:00',
+                    strCountry: 'Germany',
+                    strHomeTeamBadge: 'https://via.placeholder.com/40?text=FCB',
+                    strAwayTeamBadge: 'https://via.placeholder.com/40?text=BVB'
+                },
+                {
+                    idEvent: '4',
+                    strHomeTeam: 'Paris Saint-Germain',
+                    strAwayTeam: 'Olympique Marseille',
+                    strLeague: 'Ligue 1',
+                    dateEvent: '2025-07-21',
+                    strTime: '21:00:00',
+                    strCountry: 'France',
+                    strHomeTeamBadge: 'https://via.placeholder.com/40?text=PSG',
+                    strAwayTeamBadge: 'https://via.placeholder.com/40?text=OM'
+                },
+                {
+                    idEvent: '5',
+                    strHomeTeam: 'Inter Milan',
+                    strAwayTeam: 'Juventus',
+                    strLeague: 'Serie A',
+                    dateEvent: '2025-07-22',
+                    strTime: '17:00:00',
+                    strCountry: 'Italy',
+                    strHomeTeamBadge: 'https://via.placeholder.com/40?text=INT',
+                    strAwayTeamBadge: 'https://via.placeholder.com/40?text=JUV'
+                },
+                {
+                    idEvent: '6',
+                    strHomeTeam: 'AS Monaco',
+                    strAwayTeam: 'Nice',
+                    strLeague: 'Ligue 1',
+                    dateEvent: '2025-07-23',
+                    strTime: '19:00:00',
+                    strCountry: 'France',
+                    strHomeTeamBadge: 'https://via.placeholder.com/40?text=ASM',
+                    strAwayTeamBadge: 'https://via.placeholder.com/40?text=OGC'
+                }
+            ];
+            
+            displayMatches(demoMatches);
+        }
+
+        function displayMatches(matches) {
+            const matchesGrid = document.getElementById('matchesGrid');
+            
+            const matchesHTML = matches.map((match, index) => {
+                const matchDate = new Date(`${match.dateEvent} ${match.strTime || '15:00:00'}`);
+                const now = new Date();
+                const timeDiff = matchDate.getTime() - now.getTime();
+                const isMatchSoon = timeDiff < 3600000; // 1 heure
+                const isMatchPassed = timeDiff < 0;
+                
+                const continent = continentMapping[match.strCountry] || 'Europe';
+                const homeOdds = oddsData.home_win[index % oddsData.home_win.length];
+                const drawOdds = oddsData.draw[index % oddsData.draw.length];
+                const awayOdds = oddsData.away_win[index % oddsData.away_win.length];
+
+                return `
+                    <div class="match-card">
+                        <div class="continent-badge">${continent}</div>
+                        <div class="match-header">
+                            <div class="match-league">${match.strLeague || 'Championnat'}</div>
+                            <div class="match-time">${formatDate(matchDate)}</div>
+                        </div>
+                        
+                        <div class="match-teams">
+                            <div class="team">
+                                <img src="${match.strHomeTeamBadge || 'https://via.placeholder.com/40'}" 
+                                     alt="${match.strHomeTeam}" class="team-logo" 
+                                     onerror="this.src='https://via.placeholder.com/40'">
+                                <div class="team-name">${match.strHomeTeam}</div>
+                            </div>
+                            <div class="vs">VS</div>
+                            <div class="team">
+                                <div class="team-name">${match.strAwayTeam}</div>
+                                <img src="${match.strAwayTeamBadge || 'https://via.placeholder.com/40'}" 
+                                     alt="${match.strAwayTeam}" class="team-logo" 
+                                     onerror="this.src='https://via.placeholder.com/40'">
+                            </div>
+                        </div>
+                        
+                        ${isMatchPassed ? 
+                            '<div class="closed">Prédictions fermées</div>' :
+                            isMatchSoon ? 
+                                `<div class="countdown">⏰ Fermeture dans ${Math.floor(timeDiff / 60000)} min</div>` :
+                                ''
+                        }
+                        
+                        ${!isMatchPassed ? `
+                            <div class="prediction-section">
+                                <div class="prediction-options">
+                                    <div class="prediction-btn ${isMatchSoon ? 'disabled' : ''}" 
+                                         onclick="${isMatchSoon ? '' : `selectPrediction('${match.idEvent}', 'home', ${homeOdds})`}">
+                                        <div class="odds">${homeOdds}</div>
+                                        <div class="prediction-label">Victoire ${match.strHomeTeam}</div>
+                                    </div>
+                                    <div class="prediction-btn ${isMatchSoon ? 'disabled' : ''}" 
+                                         onclick="${isMatchSoon ? '' : `selectPrediction('${match.idEvent}', 'draw', ${drawOdds})`}">
+                                        <div class="odds">${drawOdds}</div>
+                                        <div class="prediction-label">Match Nul</div>
+                                    </div>
+                                    <div class="prediction-btn ${isMatchSoon ? 'disabled' : ''}" 
+                                         onclick="${isMatchSoon ? '' : `selectPrediction('${match.idEvent}', 'away', ${awayOdds})`}">
+                                        <div class="odds">${awayOdds}</div>
+                                        <div class="prediction-label">Victoire ${match.strAwayTeam}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stake-section">
+                                    <input type="number" class="stake-input" placeholder="Mise (points)" 
+                                           min="10" max="500" value="50" 
+                                           oninput="updatePotentialWin('${match.idEvent}')"
+                                           id="stake-${match.idEvent}" ${isMatchSoon ? 'disabled' : ''}>
+                                    <div class="potential-win" id="potential-${match.idEvent}">
+                                        Gain potentiel: 0 points
+                                    </div>
+                                </div>
+                                
+                                <button class="submit-prediction" 
+                                        onclick="submitPrediction('${match.idEvent}')"
+                                        ${isMatchSoon ? 'disabled' : ''}>
+                                    ${isMatchSoon ? 'Trop tard!' : 'Valider la Prédiction'}
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            matchesGrid.innerHTML = matchesHTML;
+        }
+
+        let selectedPredictions = {};
+
+        function selectPrediction(matchId, type, odds) {
+            // Désélectionner les autres options pour ce match
+            document.querySelectorAll(`[onclick*="${matchId}"]`).forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Sélectionner l'option choisie
+            event.target.classList.add('selected');
+            
+            selectedPredictions[matchId] = { type, odds };
+            updatePotentialWin(matchId);
+        }
+
+        function updatePotentialWin(matchId) {
+            const stakeInput = document.getElementById(`stake-${matchId}`);
+            const potentialDiv = document.getElementById(`potential-${matchId}`);
+            const stake = parseInt(stakeInput.value) || 0;
+            
+            if (selectedPredictions[matchId] && stake > 0) {
+                const baseWin = Math.round(stake * selectedPredictions[matchId].odds);
+                const vipBonus = calculateVipBonus(baseWin);
+                const totalWin = baseWin + vipBonus;
+                
+                if (vipBonus > 0) {
+                    potentialDiv.innerHTML = `
+                        Gain potentiel: ${totalWin} points
+                        <br><small style="color: #28a745;">Bonus VIP: +${vipBonus} points</small>
+                    `;
+                } else {
+                    potentialDiv.textContent = `Gain potentiel: ${totalWin} points`;
+                }
+                potentialDiv.style.color = '#28a745';
+            } else {
+                potentialDiv.textContent = 'Sélectionnez une prédiction';
+                potentialDiv.style.color = '#666';
+            }
+        }
+
+        function submitPrediction(matchId) {
+            const stake = parseInt(document.getElementById(`stake-${matchId}`).value);
+            const prediction = selectedPredictions[matchId];
+            
+            if (!prediction) {
+                showNotification('❌ Veuillez sélectionner une prédiction', 'error');
+                return;
+            }
+            
+            if (!stake || stake < 10 || stake > 500) {
+                showNotification('❌ La mise doit être entre 10 et 500 points', 'error');
+                return;
+            }
+            
+            if (stake > userStats.points) {
+                showNotification('❌ Mise supérieure à vos points disponibles', 'error');
+                return;
+            }
+            
+            // Calculer les gains avec bonus VIP
+            const baseWin = Math.round(stake * prediction.odds);
+            const vipBonus = calculateVipBonus(baseWin);
+            const totalWin = baseWin + vipBonus;
+            
+            // Ajouter la prédiction localement
+            userPredictions.push({
+                matchId,
+                prediction: prediction.type,
+                odds: prediction.odds,
+                stake,
+                potentialWin: totalWin,
+                vipBonus: vipBonus,
+                status: 'pending',
+                date: new Date().toISOString()
+            });
+            
+            // Déduire les points
+            userStats.points -= stake;
+            userStats.totalPredictions++;
+            
+            // Sauvegarder dans Supabase
+            savePredictionToDB(matchId, prediction.type, prediction.odds, stake, totalWin, vipBonus);
+            updateUserPointsDB(userStats.points);
+            
+            updateUserStats();
+            
+            let message = '🎉 Prédiction enregistrée avec succès!';
+            if (vipBonus > 0) {
+                message += ` Bonus VIP: +${vipBonus} points potentiels !`;
+            }
+            
+            showNotification(message, 'success');
+            
+            // Désactiver le bouton pour ce match
+            const card = event.target.closest('.match-card');
+            card.querySelector('.submit-prediction').disabled = true;
+            card.querySelector('.submit-prediction').textContent = 'Prédiction enregistrée';
+        }
+
+        function displayUserPredictions() {
+            const container = document.getElementById('userPredictions');
+            
+            if (userPredictions.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Aucune prédiction enregistrée</p>';
+                return;
+            }
+            
+            const predictionsHTML = userPredictions.map(pred => `
+                <div class="prediction-item">
+                    <div>
+                        <strong>${pred.prediction === 'home' ? 'Victoire Domicile' : 
+                                  pred.prediction === 'away' ? 'Victoire Extérieur' : 'Match Nul'}</strong>
+                        <br>
+                        <small>Mise: ${pred.stake} pts • Cote: ${pred.odds} • Gain potentiel: ${pred.potentialWin} pts</small>
+                        ${pred.vipBonus && pred.vipBonus > 0 ? `<br><small style="color: #28a745;">Bonus VIP: +${pred.vipBonus} pts</small>` : ''}
+                    </div>
+                    <div class="prediction-result ${pred.status}">
+                        ${pred.status === 'pending' ? 'En attente' : 
+                          pred.status === 'win' ? `+${pred.potentialWin} pts` : 
+                          `-${pred.stake} pts`}
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = predictionsHTML;
+        }
+
+        function displayLeaderboard() {
+            const leaderboardData = [
+                { rank: 1, name: 'Alexandre M.', points: 2850, winRate: 75 },
+                { rank: 2, name: 'Sophie L.', points: 2640, winRate: 72 },
+                { rank: 3, name: 'Thomas B.', points: 2390, winRate: 69 },
+                { rank: 4, name: 'Marie D.', points: 2180, winRate: 68 },
+                { rank: 5, name: 'Lucas R.', points: 1950, winRate: 67 },
+                { rank: 6, name: 'Emma C.', points: 1840, winRate: 66 },
+                { rank: 7, name: 'Hugo P.', points: 1720, winRate: 65 },
+                { rank: 8, name: 'Léa M.', points: 1580, winRate: 64 },
+                { rank: 9, name: 'Nathan G.', points: 1450, winRate: 63 },
+                { rank: 10, name: 'Chloé F.', points: 1380, winRate: 62 },
+                { rank: 11, name: 'Maxime T.', points: 1290, winRate: 61 },
+                { rank: 12, name: 'Vous', points: userStats.points, winRate: userStats.winRate }
+            ];
+            
+            const container = document.getElementById('leaderboardList');
+            const leaderboardHTML = leaderboardData.map(user => `
+                <div class="leaderboard-item" style="${user.name === 'Vous' ? 'background: #f8f9ff; border: 2px solid #667eea;' : ''}">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="leaderboard-rank">#${user.rank}</div>
+                        <div>
+                            <strong>${user.name}</strong>
+                            <br>
+                            <small>${user.winRate}% de réussite</small>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <strong>${user.points} pts</strong>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = leaderboardHTML;
+        }
+
+        function displayRewards() {
+            const rewards = [
+                // Achievements (Gratuits)
+                { name: '🎯 Bonus Quotidien', description: 'Connectez-vous chaque jour', points: 50, cost: 0, type: 'daily', category: 'achievement' },
+                { name: '🔥 Série de 3 victoires', description: 'Gagnez 3 prédictions d\'affilée', points: 200, cost: 0, type: 'streak', category: 'achievement' },
+                { name: '📊 50 Prédictions', description: 'Effectuez 50 prédictions', points: 300, cost: 0, type: 'milestone', category: 'achievement' },
+                { name: '🎯 Précision 70%', description: 'Atteignez 70% de réussite', points: 500, cost: 0, type: 'accuracy', category: 'achievement' },
+                { name: '👑 Top 20 du mois', description: 'Finissez dans le top 20 mensuel', points: 400, cost: 0, type: 'ranking', category: 'achievement' },
+
+                // Récompenses Simples (100-800 points)
+                { name: '💎 Points Bonus x2', description: 'Doubleur de points pendant 1 jour', points: 0, cost: 150, type: 'multiplier', category: 'digital' },
+                { name: '🏆 Badge Premium', description: 'Badge exclusif sur votre profil', points: 0, cost: 200, type: 'cosmetic', category: 'digital' },
+                { name: '📱 Crédit Mobile 5€', description: 'Recharge téléphone', points: 0, cost: 400, type: 'mobile_credit', category: 'digital' },
+                { name: '⭐ Prédictions Illimitées', description: 'Pariez sans limite pendant 3 jours', points: 0, cost: 350, type: 'unlimited', category: 'digital' },
+                { name: '🎵 Spotify Premium 1 mois', description: 'Abonnement Spotify Premium', points: 0, cost: 800, type: 'subscription', category: 'digital' },
+
+                // Cartes Cadeaux (500-1500 points)
+                { name: '🎁 Carte iTunes 5€', description: 'Carte cadeau App Store / iTunes', points: 0, cost: 500, type: 'gift_card', category: 'digital' },
+                { name: '🎮 Carte PSN 10€', description: 'Carte cadeau PlayStation Network', points: 0, cost: 900, type: 'gift_card', category: 'digital' },
+                { name: '🛒 Carte Amazon 10€', description: 'Carte cadeau Amazon', points: 0, cost: 1000, type: 'gift_card', category: 'digital' },
+                { name: '📱 Crédit Mobile 15€', description: 'Recharge téléphone (Orange, MTN, Moov)', points: 0, cost: 1200, type: 'mobile_credit', category: 'digital' },
+                { name: '🍕 Bon Restaurant 20€', description: 'Bon d\'achat restaurant', points: 0, cost: 1500, type: 'food', category: 'physical' },
+
+                // Articles Physiques (2000-8000 points)
+                { name: '🧢 Casquette Premium', description: 'Casquette de marque', points: 0, cost: 2000, type: 'merchandise', category: 'physical' },
+                { name: '🎒 Sac de Sport', description: 'Sac de sport de marque', points: 0, cost: 3000, type: 'merchandise', category: 'physical' },
+                { name: '⚽ Maillot de Foot', description: 'Maillot de votre équipe favorite', points: 0, cost: 4500, type: 'merchandise', category: 'physical' },
+                { name: '👟 Chaussures de Sport', description: 'Paire de chaussures Nike/Adidas', points: 0, cost: 8000, type: 'merchandise', category: 'physical' },
+
+                // Expériences Premium (5000-15000 points)
+                { name: '🎬 Cinéma VIP', description: 'Séance cinéma avec popcorn pour 2', points: 0, cost: 5000, type: 'entertainment', category: 'vip' },
+                { name: '🍽️ Restaurant Gastronomique', description: 'Repas pour 2 personnes', points: 0, cost: 7000, type: 'dining', category: 'vip' },
+                { name: '🏨 Weekend Hôtel', description: 'Nuit d\'hôtel 4 étoiles', points: 0, cost: 10000, type: 'hotel', category: 'vip' },
+                { name: '🎮 Console de Jeu', description: 'PlayStation 5 ou Xbox Series X', points: 0, cost: 15000, type: 'electronics', category: 'vip' },
+
+                // Cadeaux Mystère (prix variables)
+                { name: '🎁 Cadeau Mystère Bronze', description: 'Surprise garantie (valeur 5-15€)', points: 0, cost: 600, type: 'mystery_bronze', category: 'mystery' },
+                { name: '🎁 Cadeau Mystère Argent', description: 'Surprise garantie (valeur 15-50€)', points: 0, cost: 1200, type: 'mystery_silver', category: 'mystery' },
+                { name: '🎁 Cadeau Mystère Or', description: 'Surprise garantie (valeur 50-100€)', points: 0, cost: 2500, type: 'mystery_gold', category: 'mystery' },
+                { name: '🎁 Cadeau Mystère Platine', description: 'Surprise garantie (valeur 100-250€)', points: 0, cost: 5000, type: 'mystery_platinum', category: 'mystery' },
+                { name: '🎁 Cadeau Mystère Diamant', description: 'Surprise garantie (valeur 250-500€)', points: 0, cost: 10000, type: 'mystery_diamond', category: 'mystery' },
+                { name: '🎁 Cadeau Mystère Légendaire', description: 'Surprise garantie (valeur 500-1000€)', points: 0, cost: 20000, type: 'mystery_legendary', category: 'mystery' }
+            ];
+            
+            const container = document.getElementById('rewardsList');
+            
+            // Grouper par catégorie
+            const categories = {
+                'achievement': { name: '🏆 Achievements', color: '#28a745' },
+                'digital': { name: '💎 Récompenses Digitales', color: '#667eea' },
+                'physical': { name: '🎁 Articles Physiques', color: '#dc3545' },
+                'vip': { name: '⭐ Expériences VIP', color: '#ffd700' },
+                'mystery': { name: '🎁 Cadeaux Mystère', color: '#9b59b6' }
+            };
+            
+            let rewardsHTML = '';
+            
+            Object.keys(categories).forEach(categoryKey => {
+                const categoryRewards = rewards.filter(r => r.category === categoryKey);
+                if (categoryRewards.length > 0) {
+                    rewardsHTML += `
+                        <div class="reward-category">
+                            <h4 style="color: ${categories[categoryKey].color}; margin-bottom: 15px; font-size: 1.2rem;">
+                                ${categories[categoryKey].name}
+                            </h4>
+                            <div class="reward-category-grid">
+                                ${categoryRewards.map(reward => {
+                                    const isAffordable = reward.cost === 0 || userStats.points >= reward.cost;
+                                    const isAchievement = reward.cost === 0 && reward.points > 0;
+                                    const isMystery = reward.type.includes('mystery');
+                                    
+                                    return `
+                                        <div class="reward-card ${isAffordable ? 'affordable' : 'expensive'} ${isAchievement ? 'achievement' : ''} ${isMystery ? 'mystery' : ''}">
+                                            <div class="reward-content">
+                                                <div class="reward-info">
+                                                    <strong>${reward.name}</strong>
+                                                    <br>
+                                                    <small>${reward.description}</small>
+                                                    ${isMystery ? '<br><small style="color: #ffd700; font-weight: bold;">🎲 Surprise garantie!</small>' : ''}
+                                                </div>
+                                                <div class="reward-action">
+                                                    ${isAchievement ? 
+                                                        `<div class="achievement-points">+${reward.points} pts</div>
+                                                         <button class="claim-btn achievement-btn" onclick="claimAchievement('${reward.type}', ${reward.points})">
+                                                             Débloquer
+                                                         </button>` :
+                                                        `<div class="reward-cost">${reward.cost.toLocaleString()} pts</div>
+                                                         <button class="claim-btn ${isAffordable ? 'affordable-btn' : 'expensive-btn'}" 
+                                                                 onclick="claimReward('${reward.type}', ${reward.cost}, '${reward.name}')"
+                                                                 ${!isAffordable ? 'disabled' : ''}>
+                                                             ${isMystery ? (isAffordable ? 'Ouvrir 🎁' : 'Pas assez de pts') : 
+                                                               (isAffordable ? 'Échanger' : 'Pas assez de pts')}
+                                                         </button>`
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            container.innerHTML = rewardsHTML;
+        }
+
+        function updateUserStats() {
+            document.getElementById('userPoints').textContent = userStats.points.toLocaleString();
+            document.getElementById('userRank').textContent = userStats.rank;
+            document.getElementById('winRate').textContent = userStats.winRate + '%';
+            document.getElementById('totalPredictions').textContent = userStats.totalPredictions;
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('fr-FR', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Fonctions pour l'achat de points
+        function displayBuyPoints() {
+            updatePrices();
+            setupCustomPointsListener();
+        }
+
+        function updatePrices() {
+            const currency = document.getElementById('currencySelect').value;
+            const symbol = currency === 'USD' ? '
+
+        function closeNotification() {
+            const notification = document.getElementById('rewardNotification');
+            if (notification) {
+                notification.classList.remove('show');
+            }
+        }
+
+        // Initialisation
+        window.addEventListener('load', function() {
+            initializeApp();
+            loadMatches();
+            displayConversionInfo();
+            
+            // Ajouter les événements pour les filtres
+            document.getElementById('continentFilter').addEventListener('change', filterMatches);
+            document.getElementById('leagueFilter').addEventListener('change', filterMatches);
+            document.getElementById('timeFilter').addEventListener('change', filterMatches);
+        });
+
+        // Initialisation de l'application avec Supabase
+        async function initializeApp() {
+            try {
+                // Charger l'utilisateur test ou créer un nouveau
+                await loadOrCreateUser();
+                
+                // Charger les prédictions de l'utilisateur
+                await loadUserPredictions();
+                
+                // Mettre à jour l'interface
+                updateUserStats();
+                
+                console.log('✅ Application initialisée avec Supabase !');
+                showNotification('🎉 Application connectée à la base de données !', 'success');
+                
+            } catch (error) {
+                console.error('❌ Erreur initialisation:', error);
+                showNotification('⚠️ Mode hors ligne activé', 'info');
+            }
+        }
+
+        // Charger ou créer un utilisateur
+        async function loadOrCreateUser() {
+            try {
+                // Chercher l'utilisateur test
+                const { data: users, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', 'test@predikto.com')
+                    .single();
+                
+                if (error && error.code === 'PGRST116') {
+                    // Utilisateur n'existe pas, le créer
+                    console.log('Création utilisateur test...');
+                    return;
+                }
+                
+                if (users) {
+                    currentUser = users;
+                    currentUserId = users.id;
+                    
+                    // Mettre à jour les stats locales
+                    userStats = {
+                        points: users.points,
+                        rank: users.rank,
+                        winRate: users.win_rate,
+                        totalPredictions: users.total_predictions,
+                        currentStreak: 2,
+                        vipStatus: users.vip_status || 'free',
+                        vipExpiry: users.vip_expiry
+                    };
+                }
+                
+            } catch (error) {
+                console.error('Erreur chargement utilisateur:', error);
+            }
+        }
+
+        // Charger les prédictions de l'utilisateur
+        async function loadUserPredictions() {
+            if (!currentUserId) return;
+            
+            try {
+                const { data: predictions, error } = await supabase
+                    .from('predictions')
+                    .select('*')
+                    .eq('user_id', currentUserId)
+                    .order('created_at', { ascending: false });
+                
+                if (predictions) {
+                    userPredictions = predictions.map(pred => ({
+                        matchId: pred.match_id,
+                        prediction: pred.prediction_type,
+                        odds: pred.odds,
+                        stake: pred.stake,
+                        potentialWin: pred.potential_win,
+                        vipBonus: pred.vip_bonus || 0,
+                        status: pred.status,
+                        date: pred.created_at
+                    }));
+                }
+                
+            } catch (error) {
+                console.error('Erreur chargement prédictions:', error);
+            }
+        }
+
+        // Sauvegarder une prédiction dans Supabase
+        async function savePredictionToDB(matchId, predictionType, odds, stake, potentialWin, vipBonus = 0) {
+            if (!currentUserId) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('predictions')
+                    .insert([
+                        {
+                            user_id: currentUserId,
+                            match_id: matchId,
+                            prediction_type: predictionType,
+                            odds: odds,
+                            stake: stake,
+                            potential_win: potentialWin,
+                            vip_bonus: vipBonus,
+                            status: 'pending'
+                        }
+                    ]);
+                
+                if (!error) {
+                    console.log('✅ Prédiction sauvegardée en DB');
+                    
+                    // Mettre à jour les stats utilisateur
+                    await updateUserStats();
+                }
+                
+            } catch (error) {
+                console.error('Erreur sauvegarde prédiction:', error);
+            }
+        }
+
+        // Mettre à jour les points de l'utilisateur dans Supabase
+        async function updateUserPointsDB(newPoints) {
+            if (!currentUserId) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .update({ 
+                        points: newPoints,
+                        total_predictions: userStats.totalPredictions,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentUserId);
+                
+                if (!error) {
+                    console.log('✅ Points mis à jour en DB:', newPoints);
+                }
+                
+            } catch (error) {
+                console.error('Erreur mise à jour points:', error);
+            }
+        }
+
+        // Enregistrer un achat de points
+        async function savePointPurchase(amount, paystackReference) {
+            if (!currentUserId) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('point_transactions')
+                    .insert([
+                        {
+                            user_id: currentUserId,
+                            type: 'purchase',
+                            amount: amount,
+                            description: `Achat de ${amount} points`,
+                            paystack_reference: paystackReference
+                        }
+                    ]);
+                
+                if (!error) {
+                    console.log('✅ Achat enregistré en DB');
+                }
+                
+            } catch (error) {
+                console.error('Erreur enregistrement achat:', error);
+            }
+        }
+
+        // Système VIP
+        function displayVipSection() {
+            updateVipPrices();
+            updateVipStatus();
+        }
+
+        function updateVipPrices() {
+            const currency = document.getElementById('vipCurrencySelect').value;
+            const symbol = currency === 'USD' ? '
+
+        function filterMatches() {
+            // Fonction pour filtrer les matchs selon les critères sélectionnés
+            const continentFilter = document.getElementById('continentFilter').value;
+            const leagueFilter = document.getElementById('leagueFilter').value;
+            const timeFilter = document.getElementById('timeFilter').value;
+            
+            // Ici vous pouvez implémenter la logique de filtrage
+            console.log('Filtres appliqués:', { continentFilter, leagueFilter, timeFilter });
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.remove('active');
+        }
+
+        function showPaymentModal() {
+            document.getElementById('paymentModal').classList.add('active');
+        }
+
+        // Système de récompenses
+        function claimReward(type, cost, name) {
+            if (userStats.points < cost) {
+                showNotification('❌ Pas assez de points !', 'error');
+                return;
+            }
+            
+            // Vérifier si c'est un cadeau mystère
+            if (type.includes('mystery')) {
+                claimMysteryReward(type, cost, name);
+                return;
+            }
+            
+            if (confirm(`Échanger ${cost} points contre "${name}" ?`)) {
+                userStats.points -= cost;
+                updateUserStats();
+                showNotification(`🎉 Récompense réclamée: ${name}`, 'success');
+                
+                // Marquer la récompense comme réclamée
+                const rewardCard = event.target.closest('.reward-card');
+                rewardCard.classList.add('reward-claimed');
+                rewardCard.querySelector('.claim-btn').textContent = 'Réclamé';
+                rewardCard.querySelector('.claim-btn').disabled = true;
+                
+                // Enregistrer la transaction
+                saveRewardTransaction(type, cost, name);
+            }
+        }
+
+        function claimMysteryReward(type, cost, name) {
+            if (confirm(`Ouvrir ${name} pour ${cost} points ?`)) {
+                userStats.points -= cost;
+                updateUserStats();
+                
+                // Générer un cadeau mystère
+                const mysteryReward = generateMysteryReward(type);
+                
+                // Afficher le résultat du cadeau mystère
+                showMysteryResult(mysteryReward);
+                
+                // Enregistrer la transaction
+                saveRewardTransaction(type, cost, `${name} → ${mysteryReward.name}`);
+            }
+        }
+
+        function generateMysteryReward(type) {
+            const mysteryRewards = {
+                'mystery_bronze': [
+                    { name: 'Crédit Mobile 5€', value: '5€' },
+                    { name: 'Carte iTunes 5€', value: '5€' },
+                    { name: 'Bon Restaurant 10€', value: '10€' },
+                    { name: 'Badge Premium + 100 points', value: '15€' },
+                    { name: 'Casquette de marque', value: '12€' }
+                ],
+                'mystery_silver': [
+                    { name: 'Carte Amazon 20€', value: '20€' },
+                    { name: 'Crédit Mobile 25€', value: '25€' },
+                    { name: 'Spotify Premium 3 mois', value: '30€' },
+                    { name: 'Casquette + T-shirt', value: '35€' },
+                    { name: 'Bon Restaurant 50€', value: '50€' }
+                ],
+                'mystery_gold': [
+                    { name: 'Maillot de Foot Officiel', value: '70€' },
+                    { name: 'Sac de Sport Premium', value: '60€' },
+                    { name: 'Écouteurs Bluetooth', value: '80€' },
+                    { name: 'Montre Connectée', value: '90€' },
+                    { name: 'Bon d\'achat 100€', value: '100€' }
+                ],
+                'mystery_platinum': [
+                    { name: 'Pack Sportif Complet', value: '150€' },
+                    { name: 'Tablette Android', value: '200€' },
+                    { name: 'Bon d\'achat 200€', value: '200€' },
+                    { name: 'Séjour Spa Weekend', value: '250€' }
+                ],
+                'mystery_diamond': [
+                    { name: 'Console de Jeu Portable', value: '400€' },
+                    { name: 'Pack Électronique Premium', value: '350€' },
+                    { name: 'Smartphone Haut de Gamme', value: '450€' },
+                    { name: 'Bon d\'achat 500€', value: '500€' }
+                ],
+                'mystery_legendary': [
+                    { name: 'Ordinateur Portable Gaming', value: '800€' },
+                    { name: 'iPhone Pro Max', value: '1000€' },
+                    { name: 'Pack Électronique Ultime', value: '750€' },
+                    { name: 'Bon d\'achat 1000€', value: '1000€' }
+                ]
+            };
+            
+            const rewards = mysteryRewards[type] || mysteryRewards['mystery_bronze'];
+            return rewards[Math.floor(Math.random() * rewards.length)];
+        }
+
+        function showMysteryResult(reward) {
+            // Créer et afficher le modal de résultat
+            const modal = document.createElement('div');
+            modal.className = 'mystery-modal';
+            modal.innerHTML = `
+                <div class="mystery-modal-content">
+                    <div class="mystery-animation">
+                        <div class="gift-box">🎁</div>
+                        <div class="sparkles">✨</div>
+                    </div>
+                    <h3 style="color: #333; margin: 20px 0;">Félicitations !</h3>
+                    <div class="mystery-reward">
+                        <div class="reward-name">${reward.name}</div>
+                        <div class="reward-value">Valeur: ${reward.value}</div>
+                    </div>
+                    <button onclick="closeMysteryModal()" class="claim-btn affordable-btn" style="margin-top: 20px;">
+                        Fantastique ! 🎉
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Animer l'apparition
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 100);
+            
+            // Effet sonore (simulation)
+            showNotification(`🎁 Cadeau mystère: ${reward.name} (${reward.value})`, 'success');
+        }
+
+        function closeMysteryModal() {
+            const modal = document.querySelector('.mystery-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.remove();
+                }, 300);
+            }
+        }
+
+        function claimAchievement(type, points) {
+            // Vérifier si l'achievement est déjà réclamé
+            const rewardCard = event.target.closest('.reward-card');
+            if (rewardCard.classList.contains('reward-claimed')) {
+                showNotification('🏆 Achievement déjà réclamé !', 'info');
+                return;
+            }
+            
+            // Simuler la vérification des conditions
+            const canClaim = checkAchievementConditions(type);
+            
+            if (canClaim) {
+                userStats.points += points;
+                updateUserStats();
+                showNotification(`🎯 Achievement débloqué: +${points} points !`, 'success');
+                
+                // Marquer l'achievement comme réclamé
+                rewardCard.classList.add('reward-claimed');
+                rewardCard.querySelector('.claim-btn').textContent = 'Réclamé';
+                rewardCard.querySelector('.claim-btn').disabled = true;
+                
+                // Mettre à jour les statistiques d'achievement
+                updateAchievementProgress();
+            } else {
+                showNotification('❌ Conditions non remplies pour cet achievement', 'error');
+            }
+        }
+
+        function checkAchievementConditions(type) {
+            switch (type) {
+                case 'daily':
+                    return true; // Toujours disponible
+                case 'streak':
+                    return userStats.currentStreak >= 3; // 3 victoires consécutives
+                case 'milestone':
+                    return userStats.totalPredictions >= 50; // 50 prédictions
+                case 'accuracy':
+                    return userStats.winRate >= 70; // 70% de réussite
+                case 'ranking':
+                    return userStats.rank <= 20; // Top 20
+                default:
+                    return false;
+            }
+        }
+
+        function updateAchievementProgress() {
+            // Simuler des statistiques d'achievement
+            userStats.currentStreak = userStats.currentStreak || 3;
+            userStats.achievements = userStats.achievements || [];
+        }
+
+        function saveRewardTransaction(type, cost, name) {
+            const transaction = {
+                type: 'reward_claim',
+                rewardType: type,
+                cost: cost,
+                name: name,
+                date: new Date().toISOString(),
+                userId: 'user123' // Simulation
+            };
+            
+            // Dans un vrai projet, cela serait sauvegardé en base de données
+            console.log('Transaction récompense sauvegardée:', transaction);
+        }
+
+        function showNotification(message, type = 'info') {
+            // Supprimer les notifications existantes
+            const existingNotifications = document.querySelectorAll('.reward-notification');
+            existingNotifications.forEach(notif => notif.remove());
+            
+            // Créer une nouvelle notification
+            const notification = document.createElement('div');
+            notification.className = 'reward-notification';
+            notification.innerHTML = `
+                <div>${message}</div>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; float: right; cursor: pointer;">&times;</button>
+            `;
+            
+            // Définir les couleurs selon le type
+            switch (type) {
+                case 'success':
+                    notification.style.background = '#28a745';
+                    break;
+                case 'error':
+                    notification.style.background = '#dc3545';
+                    break;
+                case 'info':
+                    notification.style.background = '#17a2b8';
+                    break;
+                default:
+                    notification.style.background = '#6c757d';
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Animer l'apparition
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Supprimer automatiquement après 5 secondes
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 5000);
+        }
+
+        function updateUserStats() {
+            document.getElementById('userPoints').textContent = userStats.points.toLocaleString();
+            document.getElementById('userRank').textContent = userStats.rank;
+            document.getElementById('winRate').textContent = userStats.winRate + '%';
+            document.getElementById('totalPredictions').textContent = userStats.totalPredictions;
+            
+            // Mettre à jour le statut VIP
+            const vipStatusElement = document.getElementById('vipStatus');
+            const vipStatusCard = document.getElementById('vipStatusCard');
+            
+            // Retirer les classes précédentes
+            vipStatusCard.classList.remove('basic', 'premium', 'elite');
+            
+            switch (userStats.vipStatus) {
+                case 'basic':
+                    vipStatusElement.textContent = '🥉';
+                    vipStatusCard.classList.add('basic');
+                    break;
+                case 'premium':
+                    vipStatusElement.textContent = '🥈';
+                    vipStatusCard.classList.add('premium');
+                    break;
+                case 'elite':
+                    vipStatusElement.textContent = '🥇';
+                    vipStatusCard.classList.add('elite');
+                    break;
+                default:
+                    vipStatusElement.textContent = '👤';
+                    break;
+            }
+            
+            // Mettre à jour le solde dans la section récompenses
+            const rewardPointsElement = document.getElementById('rewardPoints');
+            if (rewardPointsElement) {
+                rewardPointsElement.textContent = userStats.points.toLocaleString() + ' points';
+            }
+        }
+
+        // Fonction pour afficher les statistiques détaillées des récompenses
+        function displayRewardStats() {
+            const stats = {
+                totalRewardsClaimed: 12,
+                totalPointsSpent: 8500,
+                totalPointsEarned: 15750,
+                favoriteRewardType: 'Cartes cadeaux',
+                nextMilestone: '150 prédictions pour débloquer "Maître Prédicteur"'
+            };
+            
+            console.log('Statistiques des récompenses:', stats);
+            return stats;
+        }
+
+        // Mise à jour des compteurs toutes les minutes
+        setInterval(() => {
+            const countdowns = document.querySelectorAll('.countdown');
+            countdowns.forEach(countdown => {
+                // Mise à jour des compteurs en temps réel
+                const text = countdown.textContent;
+                const minutes = parseInt(text.match(/\d+/)?.[0] || '0');
+                if (minutes > 0) {
+                    countdown.textContent = `⏰ Fermeture dans ${minutes - 1} min`;
+                }
+            });
+        }, 60000);
+    </script>
+</body>
+</html> : currency === 'EUR' ? '€' : 'XOF ';
+            const rate = exchangeRates[currency];
+
+            document.querySelectorAll('.package-card').forEach(card => {
+                const usdPrice = parseFloat(card.dataset.usd);
+                if (!isNaN(usdPrice)) {
+                    const convertedPrice = (usdPrice * rate).toFixed(currency === 'XOF' ? 0 : 2);
+                    const priceElement = card.querySelector('.package-price');
+                    priceElement.textContent = `${symbol}${convertedPrice}`;
+                }
+            });
+        }
+
+        function setupCustomPointsListener() {
+            const customPointsInput = document.getElementById('customPoints');
+            if (customPointsInput) {
+                customPointsInput.addEventListener('input', function() {
+                    const points = parseInt(this.value) || 0;
+                    const usdPrice = points * 0.01; // 1 point = 0.01 USD
+                    const currency = document.getElementById('currencySelect').value;
+                    const rate = exchangeRates[currency];
+                    const convertedPrice = (usdPrice * rate).toFixed(currency === 'XOF' ? 0 : 2);
+                    const symbol = currency === 'USD' ? '
+
+        // Initialisation
+        window.addEventListener('load', function() {
+            loadMatches();
+            updateUserStats();
+        });
+
+        // Mise à jour des compteurs toutes les minutes
+        setInterval(() => {
+            const countdowns = document.querySelectorAll('.countdown');
+            countdowns.forEach(countdown => {
+                // Mise à jour des compteurs en temps réel
+                const text = countdown.textContent;
+                const minutes = parseInt(text.match(/\d+/)?.[0] || '0');
+                if (minutes > 0) {
+                    countdown.textContent = `⏰ Fermeture dans ${minutes - 1} min`;
+                }
+            });
+        }, 60000);
+    </script>
+</body>
+</html> : currency === 'EUR' ? '€' : 'XOF ';
+                    
+                    document.getElementById('customPrice').textContent = `${symbol}${convertedPrice}`;
+                });
+            }
+        }
+
+        function buyPoints(points, usdPrice, currency) {
+            const currentCurrency = document.getElementById('currencySelect').value;
+            const rate = exchangeRates[currentCurrency];
+            const convertedPrice = (usdPrice * rate);
+            
+            // Calculer le montant en kobo/centimes pour Paystack
+            const amountInCents = Math.round(convertedPrice * (currentCurrency === 'XOF' ? 1 : 100));
+            
+            initiatePayment(points, amountInCents, currentCurrency);
+        }
+
+        function buyCustomPoints() {
+            const points = parseInt(document.getElementById('customPoints').value);
+            if (!points || points < 50 || points > 10000) {
+                alert('Veuillez entrer un nombre de points entre 50 et 10000');
+                return;
+            }
+            
+            const usdPrice = points * 0.01;
+            const currency = document.getElementById('currencySelect').value;
+            const rate = exchangeRates[currency];
+            const convertedPrice = (usdPrice * rate);
+            const amountInCents = Math.round(convertedPrice * (currency === 'XOF' ? 1 : 100));
+            
+            initiatePayment(points, amountInCents, currency);
+        }
+
+        function initiatePayment(points, amount, currency) {
+            // Chargement du script Paystack
+            if (!window.PaystackPop) {
+                const script = document.createElement('script');
+                script.src = 'https://js.paystack.co/v1/inline.js';
+                script.onload = () => processPayment(points, amount, currency);
+                document.head.appendChild(script);
+            } else {
+                processPayment(points, amount, currency);
+            }
+        }
+
+        function processPayment(points, amount, currency) {
+            const handler = PaystackPop.setup({
+                key: PAYSTACK_PUBLIC_KEY,
+                email: 'user@predikto.com', // Email de l'utilisateur
+                amount: amount,
+                currency: currency,
+                ref: 'predikto_' + Math.floor((Math.random() * 1000000000) + 1),
+                metadata: {
+                    points: points,
+                    custom_fields: [
+                        {
+                            display_name: "Points",
+                            variable_name: "points",
+                            value: points
+                        }
+                    ]
+                },
+                callback: function(response) {
+                    // Paiement réussi
+                    handlePaymentSuccess(response, points);
+                },
+                onClose: function() {
+                    // Paiement annulé
+                    alert('Paiement annulé');
+                }
+            });
+            
+            handler.openIframe();
+        }
+
+        function handlePaymentSuccess(response, points) {
+            // Vérifier le paiement côté serveur (simulation)
+            verifyPayment(response.reference, points);
+        }
+
+        function verifyPayment(reference, points) {
+            // Simulation de vérification du paiement
+            // Dans un vrai projet, cela devrait être fait côté serveur
+            setTimeout(async () => {
+                // Ajouter les points à l'utilisateur
+                userStats.points += points;
+                
+                // Calculer les points bonus
+                let bonusPoints = 0;
+                if (points === 500) bonusPoints = 50;
+                else if (points === 1000) bonusPoints = 200;
+                else if (points === 2500) bonusPoints = 700;
+                else if (points === 5000) bonusPoints = 2000;
+                
+                if (bonusPoints > 0) {
+                    userStats.points += bonusPoints;
+                    showNotification(`🎉 Paiement réussi! Vous avez reçu ${points} points + ${bonusPoints} points bonus!`, 'success');
+                } else {
+                    showNotification(`🎉 Paiement réussi! Vous avez reçu ${points} points!`, 'success');
+                }
+                
+                // Sauvegarder dans Supabase
+                await savePointPurchase(points + bonusPoints, reference);
+                await updateUserPointsDB(userStats.points);
+                
+                updateUserStats();
+                
+                // Enregistrer la transaction (simulation)
+                saveTransaction(reference, points, bonusPoints);
+                
+            }, 1000);
+        }
+
+        function saveTransaction(reference, points, bonusPoints) {
+            // Simulation d'enregistrement de transaction
+            const transaction = {
+                reference: reference,
+                points: points,
+                bonusPoints: bonusPoints,
+                date: new Date().toISOString(),
+                status: 'completed'
+            };
+            
+            // Dans un vrai projet, cela serait sauvegardé en base de données
+            console.log('Transaction sauvegardée:', transaction);
+        }
+
+        // Calculateur de conversion de points
+        function calculatePointsValue(points) {
+            const usdValue = points * 0.01; // 1 point = 0.01 USD
+            return {
+                usd: usdValue,
+                eur: usdValue * exchangeRates.EUR,
+                xof: usdValue * exchangeRates.XOF
+            };
+        }
+
+        // Affichage des informations de conversion
+        function displayConversionInfo() {
+            const examples = [
+                { points: 100, usd: 1.00 },
+                { points: 500, usd: 4.50 },
+                { points: 1000, usd: 8.00 }
+            ];
+            
+            console.log('Conversions de points:');
+            examples.forEach(example => {
+                const values = calculatePointsValue(example.points);
+                console.log(`${example.points} points = ${values.usd.toFixed(2)} / €${values.eur.toFixed(2)} / ${values.xof.toFixed(0)} XOF`);
+            });
+        }
+
+        // Initialisation
+        window.addEventListener('load', function() {
+            loadMatches();
+            updateUserStats();
+        });
+
+        // Mise à jour des compteurs toutes les minutes
+        setInterval(() => {
+            const countdowns = document.querySelectorAll('.countdown');
+            countdowns.forEach(countdown => {
+                // Mise à jour des compteurs en temps réel
+                const text = countdown.textContent;
+                const minutes = parseInt(text.match(/\d+/)?.[0] || '0');
+                if (minutes > 0) {
+                    countdown.textContent = `⏰ Fermeture dans ${minutes - 1} min`;
+                }
+            });
+        }, 60000);
+    </script>
+</body>
+</html> : currency === 'EUR' ? '€' : 'XOF ';
+            const rate = exchangeRates[currency];
+
+            document.querySelectorAll('.vip-plan').forEach(plan => {
+                const monthlyUsd = parseFloat(plan.dataset.monthlyUsd);
+                const yearlyUsd = parseFloat(plan.dataset.yearlyUsd);
+                
+                if (!isNaN(monthlyUsd) && !isNaN(yearlyUsd)) {
+                    const monthlyConverted = (monthlyUsd * rate).toFixed(currency === 'XOF' ? 0 : 2);
+                    const yearlyConverted = (yearlyUsd * rate).toFixed(currency === 'XOF' ? 0 : 2);
+                    
+                    plan.querySelector('.price-monthly').textContent = `${symbol}${monthlyConverted}/mois`;
+                    plan.querySelector('.price-yearly').innerHTML = `${symbol}${yearlyConverted}/an <span class="discount">-17%</span>`;
+                }
+            });
+        }
+
+        function updateVipStatus() {
+            const statusSection = document.querySelector('.current-plan');
+            const planInfo = statusSection.querySelector('.plan-info');
+            
+            let statusHtml = '';
+            switch (userStats.vipStatus) {
+                case 'basic':
+                    statusHtml = `
+                        <span class="plan-name">🥉 VIP Basic</span>
+                        <span class="plan-details">+20% de gains • Badge VIP Basic</span>
+                    `;
+                    break;
+                case 'premium':
+                    statusHtml = `
+                        <span class="plan-name">🥈 VIP Premium</span>
+                        <span class="plan-details">+40% de gains • Prédictions illimitées</span>
+                    `;
+                    break;
+                case 'elite':
+                    statusHtml = `
+                        <span class="plan-name">🥇 VIP Elite</span>
+                        <span class="plan-details">+75% de gains • Tous les avantages</span>
+                    `;
+                    break;
+                default:
+                    statusHtml = `
+                        <span class="plan-name">👤 Membre Gratuit</span>
+                        <span class="plan-details">Gains standard • Accès limité</span>
+                    `;
+            }
+            
+            planInfo.innerHTML = statusHtml;
+        }
+
+        function subscribeVip(plan, period, usdPrice) {
+            const currency = document.getElementById('vipCurrencySelect').value;
+            const rate = exchangeRates[currency];
+            const convertedPrice = (usdPrice * rate);
+            
+            // Calculer le montant en kobo/centimes pour Paystack
+            const amountInCents = Math.round(convertedPrice * (currency === 'XOF' ? 1 : 100));
+            
+            initiateVipPayment(plan, period, amountInCents, currency);
+        }
+
+        function initiateVipPayment(plan, period, amount, currency) {
+            // Chargement du script Paystack
+            if (!window.PaystackPop) {
+                const script = document.createElement('script');
+                script.src = 'https://js.paystack.co/v1/inline.js';
+                script.onload = () => processVipPayment(plan, period, amount, currency);
+                document.head.appendChild(script);
+            } else {
+                processVipPayment(plan, period, amount, currency);
+            }
+        }
+
+        function processVipPayment(plan, period, amount, currency) {
+            const planNames = {
+                'basic': 'VIP Basic',
+                'premium': 'VIP Premium',
+                'elite': 'VIP Elite'
+            };
+            
+            const handler = PaystackPop.setup({
+                key: PAYSTACK_PUBLIC_KEY,
+                email: 'user@predikto.com', // Email de l'utilisateur
+                amount: amount,
+                currency: currency,
+                ref: 'vip_' + plan + '_' + period + '_' + Math.floor((Math.random() * 1000000000) + 1),
+                metadata: {
+                    plan: plan,
+                    period: period,
+                    custom_fields: [
+                        {
+                            display_name: "Plan VIP",
+                            variable_name: "vip_plan",
+                            value: planNames[plan] + ' (' + period + ')'
+                        }
+                    ]
+                },
+                callback: function(response) {
+                    // Paiement réussi
+                    handleVipPaymentSuccess(response, plan, period);
+                },
+                onClose: function() {
+                    // Paiement annulé
+                    showNotification('❌ Abonnement annulé', 'error');
+                }
+            });
+            
+            handler.openIframe();
+        }
+
+        function handleVipPaymentSuccess(response, plan, period) {
+            // Vérifier le paiement côté serveur (simulation)
+            verifyVipPayment(response.reference, plan, period);
+        }
+
+        function verifyVipPayment(reference, plan, period) {
+            // Simulation de vérification du paiement
+            setTimeout(() => {
+                // Activer le statut VIP
+                userStats.vipStatus = plan;
+                
+                // Définir la date d'expiration
+                const expiryDate = new Date();
+                if (period === 'monthly') {
+                    expiryDate.setMonth(expiryDate.getMonth() + 1);
+                } else {
+                    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                }
+                userStats.vipExpiry = expiryDate.toISOString();
+                
+                // Ajouter les points bonus
+                const bonusPoints = {
+                    'basic': 100,
+                    'premium': 500,
+                    'elite': 1000
+                };
+                
+                userStats.points += bonusPoints[plan];
+                
+                // Mise à jour de l'interface
+                updateUserStats();
+                updateVipStatus();
+                
+                const planNames = {
+                    'basic': 'VIP Basic',
+                    'premium': 'VIP Premium',
+                    'elite': 'VIP Elite'
+                };
+                
+                showNotification(`🎉 Félicitations ! Vous êtes maintenant ${planNames[plan]} ! +${bonusPoints[plan]} points bonus ajoutés !`, 'success');
+                
+                // Enregistrer l'abonnement
+                saveVipSubscription(reference, plan, period);
+                
+            }, 1000);
+        }
+
+        function saveVipSubscription(reference, plan, period) {
+            // Simulation d'enregistrement d'abonnement
+            const subscription = {
+                reference: reference,
+                plan: plan,
+                period: period,
+                startDate: new Date().toISOString(),
+                expiryDate: userStats.vipExpiry,
+                status: 'active'
+            };
+            
+            // Dans un vrai projet, cela serait sauvegardé en base de données
+            console.log('Abonnement VIP sauvegardé:', subscription);
+        }
+
+        // Calculer les gains VIP
+        function calculateVipBonus(baseGain) {
+            const bonusRates = {
+                'free': 0,
+                'basic': 0.20,
+                'premium': 0.40,
+                'elite': 0.75
+            };
+            
+            const bonus = baseGain * bonusRates[userStats.vipStatus];
+            return Math.round(bonus);
+        }
+
+        // Vérifier le statut VIP (expiration)
+        function checkVipExpiry() {
+            if (userStats.vipExpiry) {
+                const expiryDate = new Date(userStats.vipExpiry);
+                const now = new Date();
+                
+                if (now > expiryDate) {
+                    userStats.vipStatus = 'free';
+                    userStats.vipExpiry = null;
+                    showNotification('⚠️ Votre abonnement VIP a expiré. Renouvelez pour conserver vos avantages !', 'info');
+                    updateVipStatus();
+                }
+            }
+        }
+
+        // Afficher les avantages VIP dans l'interface
+        function displayVipBenefits() {
+            const benefits = {
+                'free': [],
+                'basic': ['Badge VIP Basic', '+20% de gains', '1 cadeau mystère/mois'],
+                'premium': ['Badge VIP Premium', '+40% de gains', 'Prédictions illimitées', '3 cadeaux mystère/mois', 'Support prioritaire'],
+                'elite': ['Badge VIP Elite', '+75% de gains', 'Prédictions illimitées', '5 cadeaux mystère/mois', 'Prédictions IA', 'Concierge VIP']
+            };
+            
+            return benefits[userStats.vipStatus] || [];
+        }
+
+        // Gestion des cadeaux mystère VIP gratuits
+        function claimMonthlyVipReward() {
+            const monthlyRewards = {
+                'basic': 1,
+                'premium': 3,
+                'elite': 5
+            };
+            
+            const rewardsCount = monthlyRewards[userStats.vipStatus] || 0;
+            
+            if (rewardsCount > 0) {
+                for (let i = 0; i < rewardsCount; i++) {
+                    const mysteryType = userStats.vipStatus === 'basic' ? 'mystery_bronze' : 
+                                       userStats.vipStatus === 'premium' ? 'mystery_silver' : 'mystery_gold';
+                    const reward = generateMysteryReward(mysteryType);
+                    showNotification(`🎁 Cadeau VIP mensuel: ${reward.name} (${reward.value})`, 'success');
+                }
+            }
+        }
+
+        function filterMatches() {
+            // Fonction pour filtrer les matchs selon les critères sélectionnés
+            const continentFilter = document.getElementById('continentFilter').value;
+            const leagueFilter = document.getElementById('leagueFilter').value;
+            const timeFilter = document.getElementById('timeFilter').value;
+            
+            // Ici vous pouvez implémenter la logique de filtrage
+            console.log('Filtres appliqués:', { continentFilter, leagueFilter, timeFilter });
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.remove('active');
+        }
+
+        function showPaymentModal() {
+            document.getElementById('paymentModal').classList.add('active');
+        }
+
+        // Système de récompenses
+        function claimReward(type, cost, name) {
+            if (userStats.points < cost) {
+                showNotification('❌ Pas assez de points !', 'error');
+                return;
+            }
+            
+            // Vérifier si c'est un cadeau mystère
+            if (type.includes('mystery')) {
+                claimMysteryReward(type, cost, name);
+                return;
+            }
+            
+            if (confirm(`Échanger ${cost} points contre "${name}" ?`)) {
+                userStats.points -= cost;
+                updateUserStats();
+                showNotification(`🎉 Récompense réclamée: ${name}`, 'success');
+                
+                // Marquer la récompense comme réclamée
+                const rewardCard = event.target.closest('.reward-card');
+                rewardCard.classList.add('reward-claimed');
+                rewardCard.querySelector('.claim-btn').textContent = 'Réclamé';
+                rewardCard.querySelector('.claim-btn').disabled = true;
+                
+                // Enregistrer la transaction
+                saveRewardTransaction(type, cost, name);
+            }
+        }
+
+        function claimMysteryReward(type, cost, name) {
+            if (confirm(`Ouvrir ${name} pour ${cost} points ?`)) {
+                userStats.points -= cost;
+                updateUserStats();
+                
+                // Générer un cadeau mystère
+                const mysteryReward = generateMysteryReward(type);
+                
+                // Afficher le résultat du cadeau mystère
+                showMysteryResult(mysteryReward);
+                
+                // Enregistrer la transaction
+                saveRewardTransaction(type, cost, `${name} → ${mysteryReward.name}`);
+            }
+        }
+
+        function generateMysteryReward(type) {
+            const mysteryRewards = {
+                'mystery_bronze': [
+                    { name: 'Crédit Mobile 5€', value: '5€' },
+                    { name: 'Carte iTunes 5€', value: '5€' },
+                    { name: 'Bon Restaurant 10€', value: '10€' },
+                    { name: 'Badge Premium + 100 points', value: '15€' },
+                    { name: 'Casquette de marque', value: '12€' }
+                ],
+                'mystery_silver': [
+                    { name: 'Carte Amazon 20€', value: '20€' },
+                    { name: 'Crédit Mobile 25€', value: '25€' },
+                    { name: 'Spotify Premium 3 mois', value: '30€' },
+                    { name: 'Casquette + T-shirt', value: '35€' },
+                    { name: 'Bon Restaurant 50€', value: '50€' }
+                ],
+                'mystery_gold': [
+                    { name: 'Maillot de Foot Officiel', value: '70€' },
+                    { name: 'Sac de Sport Premium', value: '60€' },
+                    { name: 'Écouteurs Bluetooth', value: '80€' },
+                    { name: 'Montre Connectée', value: '90€' },
+                    { name: 'Bon d\'achat 100€', value: '100€' }
+                ],
+                'mystery_platinum': [
+                    { name: 'Pack Sportif Complet', value: '150€' },
+                    { name: 'Tablette Android', value: '200€' },
+                    { name: 'Bon d\'achat 200€', value: '200€' },
+                    { name: 'Séjour Spa Weekend', value: '250€' }
+                ],
+                'mystery_diamond': [
+                    { name: 'Console de Jeu Portable', value: '400€' },
+                    { name: 'Pack Électronique Premium', value: '350€' },
+                    { name: 'Smartphone Haut de Gamme', value: '450€' },
+                    { name: 'Bon d\'achat 500€', value: '500€' }
+                ],
+                'mystery_legendary': [
+                    { name: 'Ordinateur Portable Gaming', value: '800€' },
+                    { name: 'iPhone Pro Max', value: '1000€' },
+                    { name: 'Pack Électronique Ultime', value: '750€' },
+                    { name: 'Bon d\'achat 1000€', value: '1000€' }
+                ]
+            };
+            
+            const rewards = mysteryRewards[type] || mysteryRewards['mystery_bronze'];
+            return rewards[Math.floor(Math.random() * rewards.length)];
+        }
+
+        function showMysteryResult(reward) {
+            // Créer et afficher le modal de résultat
+            const modal = document.createElement('div');
+            modal.className = 'mystery-modal';
+            modal.innerHTML = `
+                <div class="mystery-modal-content">
+                    <div class="mystery-animation">
+                        <div class="gift-box">🎁</div>
+                        <div class="sparkles">✨</div>
+                    </div>
+                    <h3 style="color: #333; margin: 20px 0;">Félicitations !</h3>
+                    <div class="mystery-reward">
+                        <div class="reward-name">${reward.name}</div>
+                        <div class="reward-value">Valeur: ${reward.value}</div>
+                    </div>
+                    <button onclick="closeMysteryModal()" class="claim-btn affordable-btn" style="margin-top: 20px;">
+                        Fantastique ! 🎉
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Animer l'apparition
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 100);
+            
+            // Effet sonore (simulation)
+            showNotification(`🎁 Cadeau mystère: ${reward.name} (${reward.value})`, 'success');
+        }
+
+        function closeMysteryModal() {
+            const modal = document.querySelector('.mystery-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.remove();
+                }, 300);
+            }
+        }
+
+        function claimAchievement(type, points) {
+            // Vérifier si l'achievement est déjà réclamé
+            const rewardCard = event.target.closest('.reward-card');
+            if (rewardCard.classList.contains('reward-claimed')) {
+                showNotification('🏆 Achievement déjà réclamé !', 'info');
+                return;
+            }
+            
+            // Simuler la vérification des conditions
+            const canClaim = checkAchievementConditions(type);
+            
+            if (canClaim) {
+                userStats.points += points;
+                updateUserStats();
+                showNotification(`🎯 Achievement débloqué: +${points} points !`, 'success');
+                
+                // Marquer l'achievement comme réclamé
+                rewardCard.classList.add('reward-claimed');
+                rewardCard.querySelector('.claim-btn').textContent = 'Réclamé';
+                rewardCard.querySelector('.claim-btn').disabled = true;
+                
+                // Mettre à jour les statistiques d'achievement
+                updateAchievementProgress();
+            } else {
+                showNotification('❌ Conditions non remplies pour cet achievement', 'error');
+            }
+        }
+
+        function checkAchievementConditions(type) {
+            switch (type) {
+                case 'daily':
+                    return true; // Toujours disponible
+                case 'streak':
+                    return userStats.currentStreak >= 3; // 3 victoires consécutives
+                case 'milestone':
+                    return userStats.totalPredictions >= 50; // 50 prédictions
+                case 'accuracy':
+                    return userStats.winRate >= 70; // 70% de réussite
+                case 'ranking':
+                    return userStats.rank <= 20; // Top 20
+                default:
+                    return false;
+            }
+        }
+
+        function updateAchievementProgress() {
+            // Simuler des statistiques d'achievement
+            userStats.currentStreak = userStats.currentStreak || 3;
+            userStats.achievements = userStats.achievements || [];
+        }
+
+        function saveRewardTransaction(type, cost, name) {
+            const transaction = {
+                type: 'reward_claim',
+                rewardType: type,
+                cost: cost,
+                name: name,
+                date: new Date().toISOString(),
+                userId: 'user123' // Simulation
+            };
+            
+            // Dans un vrai projet, cela serait sauvegardé en base de données
+            console.log('Transaction récompense sauvegardée:', transaction);
+        }
+
+        function showNotification(message, type = 'info') {
+            // Supprimer les notifications existantes
+            const existingNotifications = document.querySelectorAll('.reward-notification');
+            existingNotifications.forEach(notif => notif.remove());
+            
+            // Créer une nouvelle notification
+            const notification = document.createElement('div');
+            notification.className = 'reward-notification';
+            notification.innerHTML = `
+                <div>${message}</div>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; float: right; cursor: pointer;">&times;</button>
+            `;
+            
+            // Définir les couleurs selon le type
+            switch (type) {
+                case 'success':
+                    notification.style.background = '#28a745';
+                    break;
+                case 'error':
+                    notification.style.background = '#dc3545';
+                    break;
+                case 'info':
+                    notification.style.background = '#17a2b8';
+                    break;
+                default:
+                    notification.style.background = '#6c757d';
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Animer l'apparition
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Supprimer automatiquement après 5 secondes
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 5000);
+        }
+
+        function updateUserStats() {
+            document.getElementById('userPoints').textContent = userStats.points.toLocaleString();
+            document.getElementById('userRank').textContent = userStats.rank;
+            document.getElementById('winRate').textContent = userStats.winRate + '%';
+            document.getElementById('totalPredictions').textContent = userStats.totalPredictions;
+            
+            // Mettre à jour le solde dans la section récompenses
+            const rewardPointsElement = document.getElementById('rewardPoints');
+            if (rewardPointsElement) {
+                rewardPointsElement.textContent = userStats.points.toLocaleString() + ' points';
+            }
+        }
+
+        // Fonction pour afficher les statistiques détaillées des récompenses
+        function displayRewardStats() {
+            const stats = {
+                totalRewardsClaimed: 12,
+                totalPointsSpent: 8500,
+                totalPointsEarned: 15750,
+                favoriteRewardType: 'Cartes cadeaux',
+                nextMilestone: '150 prédictions pour débloquer "Maître Prédicteur"'
+            };
+            
+            console.log('Statistiques des récompenses:', stats);
+            return stats;
+        }
+
+        // Mise à jour des compteurs toutes les minutes
+        setInterval(() => {
+            const countdowns = document.querySelectorAll('.countdown');
+            countdowns.forEach(countdown => {
+                // Mise à jour des compteurs en temps réel
+                const text = countdown.textContent;
+                const minutes = parseInt(text.match(/\d+/)?.[0] || '0');
+                if (minutes > 0) {
+                    countdown.textContent = `⏰ Fermeture dans ${minutes - 1} min`;
+                }
+            });
+        }, 60000);
+    </script>
+</body>
+</html> : currency === 'EUR' ? '€' : 'XOF ';
+            const rate = exchangeRates[currency];
+
+            document.querySelectorAll('.package-card').forEach(card => {
+                const usdPrice = parseFloat(card.dataset.usd);
+                if (!isNaN(usdPrice)) {
+                    const convertedPrice = (usdPrice * rate).toFixed(currency === 'XOF' ? 0 : 2);
+                    const priceElement = card.querySelector('.package-price');
+                    priceElement.textContent = `${symbol}${convertedPrice}`;
+                }
+            });
+        }
+
+        function setupCustomPointsListener() {
+            const customPointsInput = document.getElementById('customPoints');
+            if (customPointsInput) {
+                customPointsInput.addEventListener('input', function() {
+                    const points = parseInt(this.value) || 0;
+                    const usdPrice = points * 0.01; // 1 point = 0.01 USD
+                    const currency = document.getElementById('currencySelect').value;
+                    const rate = exchangeRates[currency];
+                    const convertedPrice = (usdPrice * rate).toFixed(currency === 'XOF' ? 0 : 2);
+                    const symbol = currency === 'USD' ? '
+
+        // Initialisation
+        window.addEventListener('load', function() {
+            loadMatches();
+            updateUserStats();
+        });
+
+        // Mise à jour des compteurs toutes les minutes
+        setInterval(() => {
+            const countdowns = document.querySelectorAll('.countdown');
+            countdowns.forEach(countdown => {
+                // Mise à jour des compteurs en temps réel
+                const text = countdown.textContent;
+                const minutes = parseInt(text.match(/\d+/)?.[0] || '0');
+                if (minutes > 0) {
+                    countdown.textContent = `⏰ Fermeture dans ${minutes - 1} min`;
+                }
+            });
+        }, 60000);
+    </script>
+</body>
+</html> : currency === 'EUR' ? '€' : 'XOF ';
+                    
+                    document.getElementById('customPrice').textContent = `${symbol}${convertedPrice}`;
+                });
+            }
+        }
+
+        function buyPoints(points, usdPrice, currency) {
+            const currentCurrency = document.getElementById('currencySelect').value;
+            const rate = exchangeRates[currentCurrency];
+            const convertedPrice = (usdPrice * rate);
+            
+            // Calculer le montant en kobo/centimes pour Paystack
+            const amountInCents = Math.round(convertedPrice * (currentCurrency === 'XOF' ? 1 : 100));
+            
+            initiatePayment(points, amountInCents, currentCurrency);
+        }
+
+        function buyCustomPoints() {
+            const points = parseInt(document.getElementById('customPoints').value);
+            if (!points || points < 50 || points > 10000) {
+                alert('Veuillez entrer un nombre de points entre 50 et 10000');
+                return;
+            }
+            
+            const usdPrice = points * 0.01;
+            const currency = document.getElementById('currencySelect').value;
+            const rate = exchangeRates[currency];
+            const convertedPrice = (usdPrice * rate);
+            const amountInCents = Math.round(convertedPrice * (currency === 'XOF' ? 1 : 100));
+            
+            initiatePayment(points, amountInCents, currency);
+        }
+
+        function initiatePayment(points, amount, currency) {
+            // Chargement du script Paystack
+            if (!window.PaystackPop) {
+                const script = document.createElement('script');
+                script.src = 'https://js.paystack.co/v1/inline.js';
+                script.onload = () => processPayment(points, amount, currency);
+                document.head.appendChild(script);
+            } else {
+                processPayment(points, amount, currency);
+            }
+        }
+
+        function processPayment(points, amount, currency) {
+            const handler = PaystackPop.setup({
+                key: PAYSTACK_PUBLIC_KEY,
+                email: 'user@predikto.com', // Email de l'utilisateur
+                amount: amount,
+                currency: currency,
+                ref: 'predikto_' + Math.floor((Math.random() * 1000000000) + 1),
+                metadata: {
+                    points: points,
+                    custom_fields: [
+                        {
+                            display_name: "Points",
+                            variable_name: "points",
+                            value: points
+                        }
+                    ]
+                },
+                callback: function(response) {
+                    // Paiement réussi
+                    handlePaymentSuccess(response, points);
+                },
+                onClose: function() {
+                    // Paiement annulé
+                    alert('Paiement annulé');
+                }
+            });
+            
+            handler.openIframe();
+        }
+
+        function handlePaymentSuccess(response, points) {
+            // Vérifier le paiement côté serveur (simulation)
+            verifyPayment(response.reference, points);
+        }
+
+        function verifyPayment(reference, points) {
+            // Simulation de vérification du paiement
+            // Dans un vrai projet, cela devrait être fait côté serveur
+            setTimeout(() => {
+                // Ajouter les points à l'utilisateur
+                userStats.points += points;
+                
+                // Calculer les points bonus
+                let bonusPoints = 0;
+                if (points === 500) bonusPoints = 50;
+                else if (points === 1000) bonusPoints = 200;
+                else if (points === 2500) bonusPoints = 700;
+                else if (points === 5000) bonusPoints = 2000;
+                
+                if (bonusPoints > 0) {
+                    userStats.points += bonusPoints;
+                    alert(`Paiement réussi! Vous avez reçu ${points} points + ${bonusPoints} points bonus!`);
+                } else {
+                    alert(`Paiement réussi! Vous avez reçu ${points} points!`);
+                }
+                
+                updateUserStats();
+                
+                // Enregistrer la transaction (simulation)
+                saveTransaction(reference, points, bonusPoints);
+                
+            }, 1000);
+        }
+
+        function saveTransaction(reference, points, bonusPoints) {
+            // Simulation d'enregistrement de transaction
+            const transaction = {
+                reference: reference,
+                points: points,
+                bonusPoints: bonusPoints,
+                date: new Date().toISOString(),
+                status: 'completed'
+            };
+            
+            // Dans un vrai projet, cela serait sauvegardé en base de données
+            console.log('Transaction sauvegardée:', transaction);
+        }
+
+        // Calculateur de conversion de points
+        function calculatePointsValue(points) {
+            const usdValue = points * 0.01; // 1 point = 0.01 USD
+            return {
+                usd: usdValue,
+                eur: usdValue * exchangeRates.EUR,
+                xof: usdValue * exchangeRates.XOF
+            };
+        }
+
+        // Affichage des informations de conversion
+        function displayConversionInfo() {
+            const examples = [
+                { points: 100, usd: 1.00 },
+                { points: 500, usd: 4.50 },
+                { points: 1000, usd: 8.00 }
+            ];
+            
+            console.log('Conversions de points:');
+            examples.forEach(example => {
+                const values = calculatePointsValue(example.points);
+                console.log(`${example.points} points = ${values.usd.toFixed(2)} / €${values.eur.toFixed(2)} / ${values.xof.toFixed(0)} XOF`);
+            });
+        }
+
+        // Initialisation
+        window.addEventListener('load', function() {
+            loadMatches();
+            updateUserStats();
+        });
+
+        // Mise à jour des compteurs toutes les minutes
+        setInterval(() => {
+            const countdowns = document.querySelectorAll('.countdown');
+            countdowns.forEach(countdown => {
+                // Mise à jour des compteurs en temps réel
+                const text = countdown.textContent;
+                const minutes = parseInt(text.match(/\d+/)?.[0] || '0');
+                if (minutes > 0) {
+                    countdown.textContent = `⏰ Fermeture dans ${minutes - 1} min`;
+                }
+            });
+        }, 60000);
+    </script>
+</body>
+</html>
